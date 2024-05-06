@@ -19,6 +19,8 @@ package gr.spinellis.ckjm;
 import org.apache.bcel.generic.*;
 import org.apache.bcel.Constants;
 
+import java.util.*;
+
 /**
  * Visit a method calculating the class's Chidamber-Kemerer metrics.
  * A helper class for ClassVisitor.
@@ -38,7 +40,7 @@ class MethodVisitor extends EmptyVisitor {
     private ClassMetrics cm;
 
     /** Constructor. */
-    MethodVisitor(MethodGen m, ClassVisitor c) {
+    MethodVisitor(MethodGen m, ClassVisitor c, ArrayList<TreeSet<String>> methodInteractions) {
 	mg  = m;
 	cv = c;
 	cp  = mg.getConstantPool();

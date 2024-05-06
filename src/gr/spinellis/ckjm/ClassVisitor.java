@@ -150,31 +150,53 @@ public class ClassVisitor extends org.apache.bcel.classfile.EmptyVisitor {
         responseSet.add(signature);
     }
 
+	// Encapsulate the calculation of LCOM into a separate method
+	private int calculateLCOM(ArrayList<TreeSet<String>> mi) {
+		int lcom = 0;
+		for (int i = 0; i < mi.size(); i++) {
+			for (int j = i + 1; j < mi.size(); j++) {
+				TreeSet<?> intersection = (TreeSet<?>) mi.get(i).clone();
+				intersection.retainAll(mi.get(j));
+				if (intersection.isEmpty()) {
+					lcom++;
+				} else {
+					lcom--;
+				}
+			}
+		}
+		return Math.max(lcom, 0); // Ensure LCOM is non-negative
+	}
+	
     /** Called when a method invocation is encountered. */
-    public void visitMethod(Method method) {
+    @Override
+	public void visitMethod(Method method) {
 	MethodGen mg = new MethodGen(method, visitedClass.getClassName(), cp);
 
-	Type   result_type = mg.getReturnType();
-	Type[] argTypes   = mg.getArgumentTypes();
+	Type resultType = mg.getReturnType();
+	Type[] argTypes = mg.getArgumentTypes();
 
-	registerCoupling(mg.getReturnType());
-	for (int i = 0; i < argTypes.length; i++)
-	    registerCoupling(argTypes[i]);
+	registerCoupling(resultType);
+	for (Type argType : argTypes) {
+		registerCoupling(argType);
+	}
 
 	String[] exceptions = mg.getExceptions();
-	for (int i = 0; i < exceptions.length; i++)
-	    registerCoupling(exceptions[i]);
+	for (String exception : exceptions) {
+		registerCoupling(exception);
+	}
 
-	/* Measuring decision: A class's own methods contribute to its RFC */
 	incRFC(myClassName, method.getName(), argTypes);
 
 	cm.incWmc();
-	if (Modifier.isPublic(method.getModifiers()))
+	if (Modifier.isPublic(method.getModifiers())) {
 		cm.incNpm();
-	mi.add(new TreeSet<String>());
-	MethodVisitor factory = new MethodVisitor(mg, this);
+	}
+
+	ArrayList<TreeSet<String>> methodInteractions = new ArrayList<>();
+	MethodVisitor factory = new MethodVisitor(mg, this, methodInteractions);
 	factory.start();
-    }
+	mi.addAll(methodInteractions);
+	}
 
     /** Return a class name associated with a type. */
     static String className(Type t) {
@@ -190,27 +212,9 @@ public class ClassVisitor extends org.apache.bcel.classfile.EmptyVisitor {
 	}
     }
 
-    /** Do final accounting at the end of the visit. */
-    public void end() {
+  	public void end() {
 	cm.setCbo(efferentCoupledClasses.size());
 	cm.setRfc(responseSet.size());
-	/*
-	 * Calculate LCOM  as |P| - |Q| if |P| - |Q| > 0 or 0 otherwise
-	 * where
-	 * P = set of all empty set intersections
-	 * Q = set of all nonempty set intersections
-	 */
-	int lcom = 0;
-	for (int i = 0; i < mi.size(); i++)
-	    for (int j = i + 1; j < mi.size(); j++) {
-		/* A shallow unknown-type copy is enough */
-		TreeSet<?> intersection = (TreeSet<?>)mi.get(i).clone();
-		intersection.retainAll(mi.get(j));
-		if (intersection.size() == 0)
-		    lcom++;
-		else
-		    lcom--;
-	    }
-	cm.setLcom(lcom > 0 ? lcom : 0);
-    }
+	cm.setLcom(calculateLCOM(mi));
+	} 
 }
