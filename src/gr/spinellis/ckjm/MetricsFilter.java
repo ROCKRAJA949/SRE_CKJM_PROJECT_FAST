@@ -49,44 +49,47 @@ public class MetricsFilter {
     /** Return true if the measurements should include all classes */
     public static boolean includeAll() { return !onlyPublic; }
 
-    /**
-     * Load and parse the specified class.
-     * The class specification can be either a class file name, or
-     * a jarfile, followed by space, followed by a class file name.
-     */
-    static void processClass(ClassMetricsContainer cm, String clspec) {
-	int spc;
-	JavaClass jc = null;
 
-	if ((spc = clspec.indexOf(' ')) != -1) {
-	    String jar = clspec.substring(0, spc);
-	    clspec = clspec.substring(spc + 1);
-	    try {
-		jc = new ClassParser(jar, clspec).parse();
-	    } catch (IOException e) {
-		System.err.println("Error loading " + clspec + " from " + jar + ": " + e);
-	    }
-	} else {
-	    try {
-		jc = new ClassParser(clspec).parse();
-	    } catch (IOException e) {
-		System.err.println("Error loading " + clspec + ": " + e);
-	    }
-	}
-	if (jc != null) {
-	    ClassVisitor visitor = new ClassVisitor(jc, cm);
-	    visitor.start();
-	    visitor.end();
-	}
+    static void processClass(ClassMetricsContainer cm, String clspec) {
+    String jar = null;
+     String className = clspec.replace('/', '.');
+
+    int spaceIndex = clspec.indexOf(' ');
+    if (spaceIndex != -1) {
+        jar = clspec.substring(0, spaceIndex);
+        className = clspec.substring(spaceIndex + 1);
     }
 
-    /**
-     * The interface for other Java based applications.
-     * Implement the outputhandler to catch the results
-     *
-     * @param files Class files to be analyzed
-     * @param outputHandler An implementation of the CkjmOutputHandler interface
-     */
+    JavaClass jc = loadClass(jar, className);
+    if (jc != null) {
+        visitClass(cm, jc);
+    }
+    }
+
+    private static JavaClass loadClass(String jar, String className) {
+        try {
+            if (jar != null) {
+                return new ClassParser(jar, className).parse();
+            } else {
+                return new ClassParser(className).parse();
+            }
+        } catch (IOException e) {
+            if (jar != null) {
+                System.err.println("Error loading " + className + " from " + jar + ": " + e);
+            } else {
+                System.err.println("Error loading " + className + ": " + e);
+            }
+            return null;
+        }
+    }
+
+    private static void visitClass(ClassMetricsContainer cm, JavaClass jc) {
+        ClassVisitor visitor = new ClassVisitor(jc, cm);
+        visitor.start();
+        visitor.end();
+    }
+
+
     public static void runMetrics(String[] files, CkjmOutputHandler outputHandler) {
         ClassMetricsContainer cm = new ClassMetricsContainer();
 
@@ -95,38 +98,59 @@ public class MetricsFilter {
         cm.printMetrics(outputHandler);
     }
 
-    /** The filter's main body.
-     * Process command line arguments and the standard input.
-     */
-    public static void main(String[] argv) {
-	int argp = 0;
+  
+    public static void filter(String[] argv) {
+        int argp = 0;
 
-	if (argv.length > argp && argv[argp].equals("-s")) {
-	    includeJdk = true;
-	    argp++;
-	}
-	if (argv.length > argp && argv[argp].equals("-p")) {
-	    onlyPublic = true;
-	    argp++;
-	}
-	ClassMetricsContainer cm = new ClassMetricsContainer();
+        processCommandLineArguments(argv, argp);
 
-	if (argv.length == argp) {
-	    BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
-	    try {
-		String s;
-		while ((s = in.readLine()) != null)
-		    processClass(cm, s);
-	    } catch (Exception e) {
-		System.err.println("Error reading line: " + e);
-		System.exit(1);
-	    }
-	}
+        ClassMetricsContainer cm = new ClassMetricsContainer();
 
-	for (int i = argp; i < argv.length; i++)
-	    processClass(cm, argv[i]);
+        if (argv.length == argp) {
+            readInput(cm);
+        }
 
-	CkjmOutputHandler handler = new PrintPlainResults(System.out);
-	cm.printMetrics(handler);
+        processClassArguments(argv, argp, cm);
+
+        printMetrics(cm);
     }
-}
+
+    private static void processCommandLineArguments(String[] argv, int argp) {
+        if (argv.length > argp && argv[argp].equals("-s")) {
+            includeJdk = true;
+            argp++;
+        }
+        if (argv.length > argp && argv[argp].equals("-p")) {
+            onlyPublic = true;
+            argp++;
+        }
+    }
+
+    private static void readInput(ClassMetricsContainer cm) {
+        try (BufferedReader in = new BufferedReader(new InputStreamReader(System.in))) {
+            String s;
+            while ((s = in.readLine()) != null)
+                processClass(cm, s);
+        } catch (Exception e) {
+            System.err.println("Error reading line: " + e);
+            System.exit(1);
+        }
+    }
+
+    private static void processClassArguments(String[] argv, int argp, ClassMetricsContainer cm) {
+        for (int i = argp; i < argv.length; i++)
+            processClass(cm, argv[i]);
+    }
+
+   
+
+    private static void printMetrics(ClassMetricsContainer cm) {
+        CkjmOutputHandler handler = new PrintPlainResults(System.out);
+        cm.printMetrics(handler);
+    }
+    
+    public static void main(String[] argv) {
+       filter(argv);
+    }
+  }
+
