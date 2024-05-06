@@ -6,3 +6,4 @@ output_extra.html
 output_simple.html
 test/new.txt
 ckjm-[0-9]*
+/target/

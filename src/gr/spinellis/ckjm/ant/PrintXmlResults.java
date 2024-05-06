@@ -38,17 +38,21 @@ public class PrintXmlResults implements CkjmOutputHandler {
     }
 
     public void handleClass(String name, ClassMetrics c) {
-        p.print("<class>\n" +
-                "<name>" + name + "</name>\n" +
-                "<wmc>" + c.getWmc() + "</wmc>\n" +
-                "<dit>" + c.getDit() + "</dit>\n" +
-                "<noc>" + c.getNoc() + "</noc>\n" +
-                "<cbo>" + c.getCbo() + "</cbo>\n" +
-                "<rfc>" + c.getRfc() + "</rfc>\n" +
-                "<lcom>" + c.getLcom() + "</lcom>\n" +
-                "<ca>" + c.getCa() + "</ca>\n" +
-                "<npm>" + c.getNpm() + "</npm>\n" +
-                "</class>\n");
+       p.print("<class>\n" +
+               "<name>" + name + "</name>\n" +
+               formatMetric("wmc", c.getWmc()) +
+               formatMetric("dit", c.getDit()) +
+               formatMetric("noc", c.getNoc()) +
+               formatMetric("cbo", c.getCbo()) +
+               formatMetric("rfc", c.getRfc()) +
+               formatMetric("lcom", c.getLcom()) +
+               formatMetric("ca", c.getCa()) +
+               formatMetric("npm", c.getNpm()) +
+               "</class>\n");
+   }
+
+    private String formatMetric(String metricName, Object value) {
+        return "<" + metricName + ">" + value + "</" + metricName + ">\n";
     }
 
     public void printFooter () {
