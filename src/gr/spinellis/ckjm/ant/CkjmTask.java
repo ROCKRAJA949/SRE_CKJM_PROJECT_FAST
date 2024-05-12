@@ -131,14 +131,14 @@ public class CkjmTask extends MatchingTask {
             throw new BuildException("classdir is not a directory!");
         }
 
-	if (extdirs != null && extdirs.size() > 0) {
-	    if (System.getProperty("java.ext.dirs").length() == 0)
-		System.setProperty("java.ext.dirs", extdirs.toString());
-	    else
-		System.setProperty("java.ext.dirs",
-		    System.getProperty("java.ext.dirs") + File.pathSeparator +
-		    extdirs);
-	}
+        if (extdirs != null && extdirs.size() > 0) {
+            if (System.getProperty("java.ext.dirs").length() == 0)
+            System.setProperty("java.ext.dirs", extdirs.toString());
+            else
+            System.setProperty("java.ext.dirs",
+                System.getProperty("java.ext.dirs") + File.pathSeparator +
+                extdirs);
+        }
 
         DirectoryScanner ds = super.getDirectoryScanner(classDir);
 
@@ -146,32 +146,36 @@ public class CkjmTask extends MatchingTask {
         if (files.length == 0) {
             log("No class files in specified directory " + classDir);
         } else {
-            for (int i = 0; i < files.length; i++) {
-                files[i] = classDir.getPath() + File.separatorChar + files[i];
+            processClassFiles(files);
+        }
+    }
+
+    private void processClassFiles(String[] files) {
+        for (int i = 0; i < files.length; i++) {
+            files[i] = classDir.getPath() + File.separatorChar + files[i];
+        }
+
+        try {
+            OutputStream outputStream = new FileOutputStream(outputFile);
+
+            if (format.equals("xml")) {
+                PrintXmlResults outputXml = new PrintXmlResults(
+                        new PrintStream(outputStream));
+
+                outputXml.printHeader();
+                MetricsFilter.runMetrics(files, outputXml);
+                outputXml.printFooter();
+            } else {
+                PrintPlainResults outputPlain = new PrintPlainResults(
+                        new PrintStream(outputStream));
+                MetricsFilter.runMetrics(files, outputPlain);
             }
 
-            try {
-                OutputStream outputStream = new FileOutputStream(outputFile);
+            outputStream.close();
 
-                if (format.equals("xml")) {
-                    PrintXmlResults outputXml = new PrintXmlResults(
-                            new PrintStream(outputStream));
-
-                    outputXml.printHeader();
-                    MetricsFilter.runMetrics(files, outputXml);
-                    outputXml.printFooter();
-                } else {
-                    PrintPlainResults outputPlain = new PrintPlainResults(
-                            new PrintStream(outputStream));
-                    MetricsFilter.runMetrics(files, outputPlain);
-                }
-
-                outputStream.close();
-
-            } catch (IOException ioe) {
-                throw new BuildException("Error file handling: "
-                        + ioe.getMessage());
-            }
+        } catch (IOException ioe) {
+            throw new BuildException("Error file handling: "
+                    + ioe.getMessage());
         }
     }
 }
