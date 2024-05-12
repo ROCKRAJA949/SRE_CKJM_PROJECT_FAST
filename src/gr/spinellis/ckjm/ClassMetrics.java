@@ -35,12 +35,7 @@ public class ClassMetrics {
     private boolean isPublicClass;
 
     ClassMetrics() {
-        metrics.wmc = 0;
-        metrics.noc = 0;
-        metrics.setCbo(0);
-        metrics.npm = 0;
-	visited = false;
-        coupledClasses.afferentCoupledClasses = new HashSet<String>();
+	    visited = false;
     }
 
     //getters

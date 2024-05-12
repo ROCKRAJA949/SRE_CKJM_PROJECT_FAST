@@ -10,6 +10,13 @@ public class Metrics {
     int npm;
 
     public Metrics() {
+        wmc = 0;
+        noc = 0;
+        rfc = 0;
+        cbo = 0;
+        dit = 0;
+        lcom = 0;
+        npm = 0;
     }
 
     public int getWmc() {
